@@ -40,10 +40,12 @@ func (m *MockRepositoryInterface) EXPECT() *MockRepositoryInterfaceMockRecorder 
 }
 
 // CreateEstate mocks base method.
-func (m *MockRepositoryInterface) CreateEstate(ctx context.Context, input CreateEstateInput) error {
+func (m *MockRepositoryInterface) CreateEstate(ctx context.Context, input CreateEstateInput) (CreateEstateOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateEstate", ctx, input)
-	return ret[0].(error)
+	output, _ := ret[0].(CreateEstateOutput)
+	err, _ := ret[1].(error)
+	return output, err
 }
 
 // CreateEstate indicates an expected call of CreateEstate.
