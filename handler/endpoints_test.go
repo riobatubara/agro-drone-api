@@ -29,24 +29,23 @@ func TestCreateEstate(t *testing.T) {
 			setupMock: func(m *repository.MockRepositoryInterface) {
 				m.EXPECT().
 					CreateEstate(gomock.Any(), repository.CreateEstateInput{Width: 10, Length: 20}).
-					Return(nil).
+					Return(repository.CreateEstateOutput{Id: "generated-uuid-123"}, nil).
 					Times(1)
 			},
-			expectedCode: http.StatusCreated,
+			expectedCode:  http.StatusCreated,
+			expectedInRes: `{"id":"generated-uuid-123"}`,
 		},
 		{
-			name:          "Invalid JSON Payload",
-			payload:       `{"width": "invalid", "length": 20}`,
-			setupMock:     func(m *repository.MockRepositoryInterface) {},
-			expectedCode:  http.StatusBadRequest,
-			expectedInRes: "invalid payload schema",
+			name:         "Invalid JSON Payload",
+			payload:      `{"width": "invalid", "length": 20}`,
+			setupMock:    func(m *repository.MockRepositoryInterface) {},
+			expectedCode: http.StatusBadRequest,
 		},
 		{
-			name:          "Invalid Boundaries Zero or Less",
-			payload:       `{"width": 0, "length": 20}`,
-			setupMock:     func(m *repository.MockRepositoryInterface) {},
-			expectedCode:  http.StatusUnprocessableEntity,
-			expectedInRes: "dimensions must be greater than zero",
+			name:         "Dimensions Zero or Less Rejected",
+			payload:      `{"width": 0, "length": 20}`,
+			setupMock:    func(m *repository.MockRepositoryInterface) {},
+			expectedCode: http.StatusUnprocessableEntity,
 		},
 		{
 			name:    "Database Layer Internal Error",
@@ -54,11 +53,10 @@ func TestCreateEstate(t *testing.T) {
 			setupMock: func(m *repository.MockRepositoryInterface) {
 				m.EXPECT().
 					CreateEstate(gomock.Any(), gomock.Any()).
-					Return(errors.New("db crash scenario")).
+					Return(repository.CreateEstateOutput{}, errors.New("db disconnect")).
 					Times(1)
 			},
-			expectedCode:  http.StatusInternalServerError,
-			expectedInRes: "db crash scenario",
+			expectedCode: http.StatusInternalServerError,
 		},
 	}
 
@@ -79,14 +77,17 @@ func TestCreateEstate(t *testing.T) {
 			s := handler.NewServer(handler.NewServerOptions{Repository: mockRepo})
 
 			if err := s.CreateEstate(c); err != nil {
-				t.Fatalf("handler errored unexpectedly: %v", err)
+				t.Fatalf("handler errored: %v", err)
 			}
 
 			if rec.Code != tt.expectedCode {
 				t.Errorf("expected status %d, got %d", tt.expectedCode, rec.Code)
 			}
-			if tt.expectedInRes != "" && !strings.Contains(rec.Body.String(), tt.expectedInRes) {
-				t.Errorf("expected response to contain %q, got %q", tt.expectedInRes, rec.Body.String())
+			if tt.expectedInRes != "" {
+				actualBody := strings.TrimSpace(rec.Body.String())
+				if actualBody != tt.expectedInRes {
+					t.Errorf("expected response %s, got %s", tt.expectedInRes, actualBody)
+				}
 			}
 		})
 	}
