@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strconv"
 
+	"agro-drone-api/generated"
 	"agro-drone-api/repository"
 
 	"github.com/labstack/echo/v4"
@@ -30,11 +31,8 @@ func (s *Server) CreateEstate(c echo.Context) error {
 }
 
 // POST /estate/:id/tree
-func (s *Server) CreateTree(c echo.Context) error {
-	estateID := c.Param("id")
-	if estateID == "" {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "missing estate id parameter"})
-	}
+func (s *Server) CreateTree(c echo.Context, id string) error {
+	estateID := id
 
 	var input repository.CreateTreeInput
 	if err := c.Bind(&input); err != nil {
@@ -42,7 +40,7 @@ func (s *Server) CreateTree(c echo.Context) error {
 	}
 	input.EstateID = estateID
 
-	// 1. Core data boundaries structural safety validation
+	// Core data boundaries structural safety validation
 	estateData, err := s.Repository.GetEstateById(c.Request().Context(), repository.GetEstateByIdInput{Id: estateID})
 	if err != nil {
 		return c.JSON(http.StatusNotFound, map[string]string{"error": "target estate structure missing from grid registry"})
@@ -52,12 +50,12 @@ func (s *Server) CreateTree(c echo.Context) error {
 		return c.JSON(http.StatusUnprocessableEntity, map[string]string{"error": "coordinates fall outside estate boundaries"})
 	}
 
-	// 2. Validate Tree Height (Must range between 1 and 30 meters inclusive)
+	// Validate Tree Height (Must range between 1 and 30 meters inclusive)
 	if input.Height < 1 || input.Height > 30 {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "tree height must be between 1 and 30 meters inclusive"})
 	}
 
-	// 3. Fetch existing tree layout to check for spatial coordinate overlaps
+	// Fetch existing tree layout to check for spatial coordinate overlaps
 	treeMapData, err := s.Repository.GetTreeMapById(c.Request().Context(), repository.GetTreeMapByIdInput{EstateID: estateID})
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
@@ -69,7 +67,7 @@ func (s *Server) CreateTree(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "plot already has tree"})
 	}
 
-	// 4. Save clean record into storage layer
+	// Save clean record into storage layer
 	if err := s.Repository.CreateTree(c.Request().Context(), input); err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
@@ -78,25 +76,22 @@ func (s *Server) CreateTree(c echo.Context) error {
 }
 
 // GET /estate/:id/stats
-func (s *Server) GetEstateStats(c echo.Context) error {
-	estateID := c.Param("id")
-	if estateID == "" {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "missing estate id parameter"})
-	}
+func (s *Server) GetEstateStats(c echo.Context, id string) error {
+	estateID := id
 
-	// 1. Verify estate exists
+	// Verify estate exists
 	_, err := s.Repository.GetEstateById(c.Request().Context(), repository.GetEstateByIdInput{Id: estateID})
 	if err != nil {
 		return c.JSON(http.StatusNotFound, map[string]string{"error": "estate not found"})
 	}
 
-	// 2. Fetch all tree heights for the estate
+	// Fetch all tree heights for the estate
 	heightsData, err := s.Repository.GetTreeHeightsById(c.Request().Context(), repository.GetTreeHeightsByIdInput{EstateID: estateID})
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 
-	// 3. Handle empty datasets safely to prevent division by zero or panic
+	// Handle empty datasets safely to prevent division by zero or panic
 	if len(heightsData.Height) == 0 {
 		return c.JSON(http.StatusOK, map[string]any{
 			"count":  0,
@@ -106,14 +101,14 @@ func (s *Server) GetEstateStats(c echo.Context) error {
 		})
 	}
 
-	// 4. Sort heights in ascending order for min, max, and median calculations
+	// Sort heights in ascending order for min, max, and median calculations
 	sort.Ints(heightsData.Height)
 
 	totalTrees := len(heightsData.Height)
 	min := heightsData.Height[0]
 	max := heightsData.Height[totalTrees-1]
 
-	// 5. Calculate Median
+	// Calculate Median
 	var median float64
 	mid := totalTrees / 2
 
@@ -141,33 +136,26 @@ func abs(x int) int {
 }
 
 // GET /estate/:id/drone-plan
-func (s *Server) GetDronePlan(c echo.Context) error {
-	estateID := c.Param("id")
-	if estateID == "" {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "missing estate id parameter"})
-	}
+func (s *Server) GetDronePlan(c echo.Context, id string, params generated.GetDronePlanParams) error {
+	estateID := id
 
-	// 1. Fetch Estate Dimensions
+	// Fetch Estate Dimensions
 	estateData, err := s.Repository.GetEstateById(c.Request().Context(), repository.GetEstateByIdInput{Id: estateID})
 	if err != nil {
 		return c.JSON(http.StatusNotFound, map[string]string{"error": "estate not found"})
 	}
 
-	// 2. Fetch Tree Maps for heights
+	// Fetch Tree Maps for heights
 	treeMapData, err := s.Repository.GetTreeMapById(c.Request().Context(), repository.GetTreeMapByIdInput{EstateID: estateID})
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 
-	// 3. Parse Optional Max Distance
-	maxDistanceStr := c.QueryParam("max_distance")
+	//  Parse Optional Max Distance
 	var maxDistance int
-	hasMaxDistance := maxDistanceStr != ""
+	hasMaxDistance := params.MaxDistance != nil
 	if hasMaxDistance {
-		maxDistance, err = strconv.Atoi(maxDistanceStr)
-		if err != nil || maxDistance <= 0 {
-			return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid max_distance parameter"})
-		}
+		maxDistance = *params.MaxDistance
 	}
 
 	// Generate ordered sequence of coordinates following the required snake path
@@ -205,7 +193,7 @@ func (s *Server) GetDronePlan(c echo.Context) error {
 	for i, pt := range path {
 		targetZ := getTargetZ(pt)
 
-		// A. Vertical movement to align with the current plot target height
+		// Vertical movement to align with the current plot target height
 		vDist := abs(targetZ - currentZ)
 		if hasMaxDistance && totalDistance+vDist > maxDistance {
 			landPoint = pt
@@ -215,7 +203,7 @@ func (s *Server) GetDronePlan(c echo.Context) error {
 		totalDistance += vDist
 		currentZ = targetZ
 
-		// B. Horizontal movement to the next plot (if there is a next plot)
+		// Horizontal movement to the next plot (if there is a next plot)
 		if i < len(path)-1 {
 			nextPt := path[i+1]
 			// Horizontal distance is always 10 meters per plot increment
@@ -230,7 +218,7 @@ func (s *Server) GetDronePlan(c echo.Context) error {
 		}
 	}
 
-	// C. Descent to ground level after monitoring the final plot (if not forced down early)
+	// Descent to ground level after monitoring the final plot (if not forced down early)
 	if !forcedLanding && len(path) > 0 {
 		finalVDist := currentZ // distance back to 0m
 		if hasMaxDistance && totalDistance+finalVDist > maxDistance {
