@@ -4,7 +4,9 @@ type GetTestByIdInput struct{ Id string }
 type GetTestByIdOutput struct{ Name string }
 
 type CreateEstateInput struct{ Width, Length int }
-type GetEstateOutput struct{ Ids []string } // Fixed spelling typo
+type CreateEstateOutput struct{ Id string }
+
+type GetEstateOutput struct{ Ids []string }
 
 type GetEstateByIdInput struct{ Id string }
 type GetEstateByIdOutput struct{ Width, Length int }
