@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"agro-drone-api/generated"
 	"agro-drone-api/handler"
 	"agro-drone-api/repository"
 
@@ -112,6 +113,10 @@ func TestCreateTree(t *testing.T) {
 					Return(repository.GetEstateByIdOutput{Width: 5, Length: 5}, nil).
 					Times(1)
 				m.EXPECT().
+					GetTreeMapById(gomock.Any(), repository.GetTreeMapByIdInput{EstateID: "estate-1"}).
+					Return(repository.GetTreeMapByIdOutput{Key: map[string]int{}}, nil).
+					Times(1)
+				m.EXPECT().
 					CreateTree(gomock.Any(), repository.CreateTreeInput{EstateID: "estate-1", X: 2, Y: 3, Height: 5}).
 					Return(nil).
 					Times(1)
@@ -165,7 +170,7 @@ func TestCreateTree(t *testing.T) {
 
 			s := handler.NewServer(handler.NewServerOptions{Repository: mockRepo})
 
-			if err := s.CreateTree(c); err != nil {
+			if err := s.CreateTree(c, tt.estateID); err != nil {
 				t.Fatalf("handler errored unexpectedly: %v", err)
 			}
 
@@ -252,7 +257,8 @@ func TestCreateTree_CoordinateValidation(t *testing.T) {
 
 			s := handler.NewServer(handler.NewServerOptions{Repository: mockRepo})
 
-			if err := s.CreateTree(c); err != nil {
+			// 💡 CHANGED: Passed the mandatory "estate-valid" parameter token
+			if err := s.CreateTree(c, "estate-valid"); err != nil {
 				t.Fatalf("handler errored unexpectedly: %v", err)
 			}
 
@@ -279,24 +285,32 @@ func TestGetEstateStats(t *testing.T) {
 			estateID: "estate-1",
 			setupMock: func(m *repository.MockRepositoryInterface) {
 				m.EXPECT().
+					GetEstateById(gomock.Any(), repository.GetEstateByIdInput{Id: "estate-1"}).
+					Return(repository.GetEstateByIdOutput{Width: 5, Length: 5}, nil).
+					Times(1)
+				m.EXPECT().
 					GetTreeHeightsById(gomock.Any(), repository.GetTreeHeightsByIdInput{EstateID: "estate-1"}).
 					Return(repository.GetTreeHeightsByIdOutput{Height: []int{10, 20, 30}}, nil).
 					Times(1)
 			},
 			expectedCode:  http.StatusOK,
-			expectedInRes: `"average":20,"count":3,"max":30,"min":10`,
+			expectedInRes: `"count":3,"max":30,"median":20,"min":10`,
 		},
 		{
 			name:     "Empty Dataset Fallback Safeties",
 			estateID: "estate-empty",
 			setupMock: func(m *repository.MockRepositoryInterface) {
 				m.EXPECT().
+					GetEstateById(gomock.Any(), repository.GetEstateByIdInput{Id: "estate-empty"}).
+					Return(repository.GetEstateByIdOutput{Width: 5, Length: 5}, nil).
+					Times(1)
+				m.EXPECT().
 					GetTreeHeightsById(gomock.Any(), gomock.Any()).
 					Return(repository.GetTreeHeightsByIdOutput{Height: []int{}}, nil).
 					Times(1)
 			},
 			expectedCode:  http.StatusOK,
-			expectedInRes: `"average":0,"count":0,"max":0,"min":0`,
+			expectedInRes: `"count":0,"max":0,"median":0,"min":0`,
 		},
 	}
 
@@ -318,14 +332,13 @@ func TestGetEstateStats(t *testing.T) {
 
 			s := handler.NewServer(handler.NewServerOptions{Repository: mockRepo})
 
-			if err := s.GetEstateStats(c); err != nil {
+			if err := s.GetEstateStats(c, tt.estateID); err != nil {
 				t.Fatalf("handler errored unexpectedly: %v", err)
 			}
 
 			if rec.Code != tt.expectedCode {
 				t.Errorf("expected status %d, got %d", tt.expectedCode, rec.Code)
 			}
-			// Clean up string spacing variance issues during matching checks
 			bodyClean := strings.ReplaceAll(rec.Body.String(), " ", "")
 			if tt.expectedInRes != "" && !strings.Contains(bodyClean, tt.expectedInRes) {
 				t.Errorf("expected response to contain %q, got %q", tt.expectedInRes, bodyClean)
@@ -391,7 +404,7 @@ func TestGetEstateStats_MedianScenarios(t *testing.T) {
 
 			s := handler.NewServer(handler.NewServerOptions{Repository: mockRepo})
 
-			if err := s.GetEstateStats(c); err != nil {
+			if err := s.GetEstateStats(c, "estate-stats-id"); err != nil {
 				t.Fatalf("handler threw an unexpected error: %v", err)
 			}
 
@@ -439,7 +452,10 @@ func TestGetDronePlan_AssignmentSample(t *testing.T) {
 
 	s := handler.NewServer(handler.NewServerOptions{Repository: mockRepo})
 
-	if err := s.GetDronePlan(ctx); err != nil {
+	params := generated.GetDronePlanParams{
+		MaxDistance: nil,
+	}
+	if err := s.GetDronePlan(ctx, "sample-estate", params); err != nil {
 		t.Fatalf("unexpected handler error: %v", err)
 	}
 
