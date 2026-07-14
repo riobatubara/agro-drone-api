@@ -10,10 +10,9 @@ func (r *Repository) GetTestById(ctx context.Context, input GetTestByIdInput) (o
 	return
 }
 
-func (r *Repository) CreateEstate(ctx context.Context, input CreateEstateInput) (err error) {
-	var id string
+func (r *Repository) CreateEstate(ctx context.Context, input CreateEstateInput) (output CreateEstateOutput, err error) {
 	query := `INSERT INTO estates (width, length) VALUES ($1, $2) RETURNING id`
-	err = r.Db.QueryRowContext(ctx, query, input.Width, input.Length).Scan(&id)
+	err = r.Db.QueryRowContext(ctx, query, input.Width, input.Length).Scan(&output.Id)
 	return
 }
 
@@ -82,7 +81,6 @@ func (r *Repository) GetTreeMapById(ctx context.Context, input GetTreeMapByIdInp
 		if err = rows.Scan(&tx, &ty, &th); err != nil {
 			return
 		}
-		// Secure conversion prevents character distortion
 		key := strconv.Itoa(tx) + "," + strconv.Itoa(ty)
 		output.Key[key] = th
 	}
