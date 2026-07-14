@@ -21,11 +21,12 @@ func (s *Server) CreateEstate(c echo.Context) error {
 		return c.JSON(http.StatusUnprocessableEntity, map[string]string{"error": "dimensions must be greater than zero"})
 	}
 
-	if err := s.Repository.CreateEstate(c.Request().Context(), input); err != nil {
+	output, err := s.Repository.CreateEstate(c.Request().Context(), input)
+	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 
-	return c.NoContent(http.StatusCreated)
+	return c.JSON(http.StatusCreated, map[string]string{"id": output.Id})
 }
 
 // POST /estate/:id/tree
