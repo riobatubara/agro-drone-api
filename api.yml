@@ -1,10 +1,9 @@
 openapi: 3.0.3
 info:
   title: Agro Drone Management API
-  description: Programming assignment spec covering plantation estate modeling, tracking data nodes, and calculating path optimization drone trajectories.
   version: 1.0.0
 servers:
-  - url: http://localhost:8080
+  - url: http://localhost:1323
 paths:
   /hello:
     get:
@@ -32,7 +31,7 @@ paths:
   /estate:
     post:
       summary: Create a new plantation estate
-      description: Stores a new estate dimension profile mapping horizontal and vertical parcel lengths.
+      operationId: CreateEstate
       requestBody:
         required: true
         content:
@@ -46,12 +45,10 @@ paths:
                 width:
                   type: integer
                   minimum: 1
-                  maximum: 50000
                   example: 10
                 length:
                   type: integer
                   minimum: 1
-                  maximum: 50000
                   example: 20
       responses:
         '201':
@@ -65,27 +62,18 @@ paths:
                 properties:
                   id:
                     type: string
-                    format: uuid
-                    example: "123e4567-e89b-12d3-a456-426614174000"
-        '400':
-          description: Invalid payload dimension inputs or typing syntax.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                    example: "aaaaaa-bbbbb-ccccc-ddddd"
 
   /estate/{id}/tree:
     post:
       summary: Store a palm tree coordinate node
-      description: Documents tree entity measurements bound inside specific estate boundary frames.
+      operationId: CreateTree # 💡 This forces Go to name the function 'CreateTree'
       parameters:
         - name: id
           in: path
           required: true
-          description: Unique string footprint representing target estate tracking ID
           schema:
             type: string
-            format: uuid
       requestBody:
         required: true
         content:
@@ -99,11 +87,9 @@ paths:
               properties:
                 x:
                   type: integer
-                  minimum: 1
                   example: 3
                 y:
                   type: integer
-                  minimum: 1
                   example: 2
                 height:
                   type: integer
@@ -113,42 +99,17 @@ paths:
       responses:
         '201':
           description: Tree tracking entity logged successfully.
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - id
-                properties:
-                  id:
-                    type: string
-                    format: uuid
-                    example: "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d"
-        '400':
-          description: Coordinate out of bounds, duplicate location presence, or improper parameter limits.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '404':
-          description: Target estate structural trace is missing from grid registry.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
 
   /estate/{id}/stats:
     get:
       summary: Fetch tree structural statistics
-      description: Returns analytical measurements representing maximum, minimum, and median tree layout heights.
+      operationId: GetEstateStats # 💡 This forces Go to name the function 'GetEstateStats'
       parameters:
         - name: id
           in: path
           required: true
-          description: Unique identifying UUID string for tracking reference
           schema:
             type: string
-            format: uuid
       responses:
         '200':
           description: Height telemetry dataset evaluated completely.
@@ -164,64 +125,40 @@ paths:
                 properties:
                   count:
                     type: integer
-                    example: 5
                   max:
                     type: integer
-                    example: 25
                   min:
                     type: integer
-                    example: 5
                   median:
                     type: number
-                    format: float
-                    example: 14.5
-        '404':
-          description: Estate ID missing from database record maps.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
 
   /estate/{id}/drone-plan:
     get:
       summary: Simulate flight path evaluation plan
-      description: Computes total horizontal and vertical drone traversal distance loops utilizing structural tracking definitions.
+      operationId: GetDronePlan # 💡 This forces Go to name the function 'GetDronePlan'
       parameters:
         - name: id
           in: path
           required: true
-          description: Target estate identification key
           schema:
             type: string
-            format: uuid
         - name: max_distance
           in: query
           required: false
-          description: Optional battery capacity constraint limiting execution trajectory windows
           schema:
             type: integer
-            minimum: 1
       responses:
         '200':
           description: Drone flight navigation maps generated completely.
           content:
             application/json:
               schema:
-                oneOf:
-                  - $ref: '#/components/schemas/StandardDronePlan'
-                  - $ref: '#/components/schemas/BonusDronePlan'
-        '400':
-          description: Invalid max_distance formatting parsing errors.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '404':
-          description: Estate boundary reference structure data trace missing.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                type: object
+                required:
+                  - distance
+                properties:
+                  distance:
+                    type: integer
 
 components:
   schemas:
