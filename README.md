@@ -1,7 +1,6 @@
 # agro-drone-api
 
-## Use Case
-### Map Plantation Estates and Record Palm Tree Layouts
+### Use Case: Map Plantation Estates and Record Palm Tree Layouts
 
 #### 1. Brief Description
 Enables plantation operators to digitally model their physical agricultural land into standard geometric grid units and record the exact spatial location and physical height of individual palm trees for downstream drone inspection mapping.
@@ -25,12 +24,14 @@ The operator has the physical land survey data containing the overall dimensions
  
  **5. Validate Layout Entry**: The system maps the tree's position and confirms the asset is securely saved in the database.
 
-#### Spatial Modeling Reference Blueprint
-The schematic below shows how the system visualizes the 2D grid matrix mapping coordinates, using an example estate dimension of 60 meters (length) by 30 meters (width) resulting in 18 total active plots.
+#### 5. Visual System Blueprints
+
+##### Spatial Modeling & 2D Grid Layout Blueprint
+This diagram shows how a physical estate (e.g., 60m × 30m) is segmented into 10-meter plots with palm trees positioned precisely in the center of their respective coordinate blocks.
 <br>
 
 ```text
-NORTH ▲
+   NORTH ▲
          │
        3 ├───────┬───────┬───────┬───────┬───────┬───────┐
          │       │       │       │       │ ●     │       │
@@ -38,10 +39,49 @@ NORTH ▲
        2 ├───────┬───────┼───────┼───────┼───────┼───────┤
          │       │       │ ●     │ ●     │       │ ●     │
          │       │       │ (3, 2)│ (4, 2)│       │ (6, 2)│
-  width  1 ├───────┬───────┼───────┼───────┼───────┼───────┤
+ width 1 ├───────┬───────┼───────┼───────┼───────┼───────┤
          │       │       │ ●     │       │       │       │
          │       │       │ (3, 1)│       │       │       │
          └───────┴───────┴───────┴───────┴───────┴───────┴► EAST
              1       2       3       4       5       6
           ◄─────────────────── length ───────────────────►
+```
+
+
+##### Drone Flight Path & Vertical Altitude Trajectory
+The flight blueprint details the dynamic altitude adjustments required to scan the field. The drone flies **exactly 1 meter above the ground or tree canopy** and moves using single-axis transitions.
+
+```text
+   NORTH ▲
+         │
+         ├────────┬────────┬────────┬────────┬────────┬────────┐
+         │        │        │        │        │        │        │
+       3 │   ▲ ────────────────────────────────────────────►   │
+         │   │    │        │        │        │        │        │
+         ├───│────┬────────┼────────┼────────┼────────┼────────┤
+         │   │    │        │        │        │        │        │
+       2 │   ◄─────────────────────────────────────────── ▲    │
+         │        │        │        │        │        │   │    │
+         ├────────┬────────┼────────┼────────┼────────┼───│────┤
+         │        │        │        │        │        │   │    │
+       1 │    ────────────────────────────────────────────►    │
+         │        │        │        │        │        │        │
+         └────────┴────────┴────────┴────────┴────────┴────────┴► EAST
+              1        2        3        4        5       6
+```
+
+```text
+ ALTITUDE (m)
+     ▲
+  6  │         ┌───────┐
+  5  │ ┌───────┘ 1m cls │               ┌───────┐
+  4  │ │ 1m cls         │ ┌───────┐     │ 1m cls│
+  3  │ │                └─┘ 1m cls│     │       │
+  2  │ │                          └─────┘       │
+  1  │ │ 1m clearance above empty plots         │
+  0  └─┴─┬─────┬─┬─────┬─┬─────┬─┬─────┬─┬─────┬┴─► FLIGHT PATH
+        (1,1)   (2,1)   (3,1)   (4,1)   (5,1)
+         ▲       │       │       │       │
+      [Takeoff] [5m]    [3m]    [4m]    [Empty]
+                Tree    Tree    Tree    [Landing]
 ```
