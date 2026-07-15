@@ -11,6 +11,12 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+func (s *Server) GetHello(ctx echo.Context, params generated.GetHelloParams) error {
+	return ctx.JSON(http.StatusOK, map[string]string{
+		"message": "Hello from Agro Drone API!",
+	})
+}
+
 // POST /estate
 func (s *Server) CreateEstate(c echo.Context) error {
 	var input repository.CreateEstateInput
