@@ -29,6 +29,7 @@ The operator has the physical land survey data containing the overall dimensions
 The schematic below shows how the system visualizes the 2D grid matrix mapping coordinates, using an example estate dimension of 60 meters (length) by 30 meters (width) resulting in 18 total active plots.
 <br>
 
+```text
 NORTH ▲
          │
        3 ├───────┬───────┬───────┬───────┬───────┬───────┐
@@ -43,3 +44,4 @@ NORTH ▲
          └───────┴───────┴───────┴───────┴───────┴───────┴► EAST
              1       2       3       4       5       6
           ◄─────────────────── length ───────────────────►
+```
