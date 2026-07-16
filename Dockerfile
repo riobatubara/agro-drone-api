@@ -1,7 +1,7 @@
 # Dockerfile definition for Backend application service.
 
 # Image will be build. This is the environment.
-FROM golang:1.21-alpine as Build
+FROM golang:1.25-alpine as build
 
 # Copy all the files in repo to the inside the container at root location.
 COPY . .
